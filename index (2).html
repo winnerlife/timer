@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Focuz - Study Tracker</title>
+  <style>
+    /* Purple to blue night vibe background */
+    body {
+      background: linear-gradient(135deg, #2a0845, #1a2980);
+      color: #ffffff;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+
+    .mode-buttons {
+      margin-bottom: 30px;
+    }
+
+    /* Updated button styles for mode selection */
+    button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      color: #ffffff;
+      padding: 10px 20px;
+      margin: 0 5px;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 5px;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Active mode button */
+    .active-mode {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.7);
+    }
+
+    .timer {
+      font-size: 80px;
+      font-weight: bold;
+      margin: 30px 0;
+      letter-spacing: 2px;
+    }
+
+    /* Container for control buttons */
+    .control-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    /* Common styles for Start and Reset buttons */
+    .control-buttons button {
+      color: #ffffff;
+      padding: 15px 40px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    /* Start button style */
+    .start-button {
+      background: linear-gradient(45deg, #8e2de2, #4a00e0);
+    }
+    .start-button:hover {
+      background: linear-gradient(45deg, #6a1ab7, #3700b3);
+    }
+
+    /* Reset button style */
+    .reset-button {
+      background: linear-gradient(45deg, #4a00e0, #8e2de2);
+    }
+    .reset-button:hover {
+      background: linear-gradient(45deg, #3700b3, #6a1ab7);
+    }
+
+    .website {
+      position: fixed;
+      bottom: 20px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* Popup (modal) styling */
+    .popup {
+      display: none; /* hidden by default */
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .popup-content {
+      background: linear-gradient(135deg, #2a0845, #1a2980);
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .popup-content h2 {
+      margin-top: 0;
+      font-size: 36px;
+    }
+
+    .popup-content p {
+      font-size: 18px;
+      margin: 20px 0;
+    }
+
+    .close-button {
+      background: linear-gradient(45deg, #8e2de2, #4a00e0);
+      border: none;
+      padding: 10px 20px;
+      color: #fff;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.3s;
+    }
+
+    .close-button:hover {
+      background: linear-gradient(45deg, #6a1ab7, #3700b3);
+    }
+  </style>
+</head>
+<body>
+  <h1>focuz</h1>
+
+  <div class="mode-buttons">
+    <button class="active-mode" id="pomodoro">Pomodoro</button>
+    <button id="shortBreak">Short Break</button>
+    <button id="longBreak">Long Break</button>
+  </div>
+
+  <div class="timer" id="timer">25:00</div>
+
+  <div class="control-buttons">
+    <button class="start-button" id="start">Start</button>
+    <button class="reset-button" id="reset">Reset</button>
+  </div>
+
+  <div class="website">github.com/winnerlife</div>
+
+  <!-- Audio element to play the alarm sound -->
+  <audio id="alarmSound" src="videoplayback.m4a"></audio>
+
+  <!-- Popup modal for timer completion -->
+  <div id="popup" class="popup">
+    <div class="popup-content">
+      <h2>Time's Up!</h2>
+      <p>Your timer has finished.</p>
+      <button id="closePopup" class="close-button">Close</button>
+    </div>
+  </div>
+
+  <script>
+    let timeLeft;
+    let timerId = null;
+    let isRunning = false;
+    let currentMode = 'pomodoro'; // Track the current mode
+    const timerDisplay = document.getElementById('timer');
+    const startButton = document.getElementById('start');
+    const resetButton = document.getElementById('reset');
+    const popup = document.getElementById('popup');
+    const closePopupButton = document.getElementById('closePopup');
+    const alarmSound = document.getElementById('alarmSound');
+
+    const modes = {
+      pomodoro: 25 * 60,
+      shortBreak: 5 * 60,
+      longBreak: 15 * 60
+    };
+
+    // Sets the active mode and resets the timer if necessary.
+    function setActiveMode(mode, event) {
+      if (isRunning) {
+        clearInterval(timerId);
+        isRunning = false;
+        startButton.textContent = 'Start';
+      }
+      document.querySelectorAll('.mode-buttons button').forEach(btn => {
+        btn.classList.remove('active-mode');
+      });
+      event.target.classList.add('active-mode');
+      currentMode = mode;
+      timeLeft = modes[mode];
+      updateDisplay();
+    }
+
+    // Updates the timer display.
+    function updateDisplay() {
+      const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+      const seconds = (timeLeft % 60).toString().padStart(2, '0');
+      timerDisplay.textContent = `${minutes}:${seconds}`;
+    }
+
+    // Starts or stops the timer.
+    function startTimer() {
+      // If the timer is not running...
+      if (!isRunning) {
+        // If time is 0 or less, reset it to the initial value.
+        if (timeLeft <= 0) {
+          timeLeft = modes[currentMode];
+          updateDisplay();
+        }
+        // Hide the popup if it is visible.
+        popup.style.display = 'none';
+        isRunning = true;
+        startButton.textContent = 'Stop';
+        timerId = setInterval(() => {
+          timeLeft--;
+          updateDisplay();
+          if (timeLeft <= 0) {
+            clearInterval(timerId);
+            isRunning = false;
+            startButton.textContent = 'Start';
+            // Show the custom popup and play the alarm sound.
+            popup.style.display = 'flex';
+            alarmSound.play();
+          }
+        }, 1000);
+      } else {
+        clearInterval(timerId);
+        isRunning = false;
+        startButton.textContent = 'Start';
+      }
+    }
+
+    // Resets the timer to the selected mode's initial value.
+    function resetTimer() {
+      if (isRunning) {
+        clearInterval(timerId);
+        isRunning = false;
+        startButton.textContent = 'Start';
+      }
+      timeLeft = modes[currentMode];
+      updateDisplay();
+    }
+
+    // Close the popup: stop the alarm sound and reset the timer.
+    closePopupButton.addEventListener('click', () => {
+      // Stop the alarm sound.
+      alarmSound.pause();
+      alarmSound.currentTime = 0;
+      // Hide the popup.
+      popup.style.display = 'none';
+      // Reset the timer to the current mode's initial value.
+      timeLeft = modes[currentMode];
+      updateDisplay();
+    });
+
+    // Attach event listeners to mode buttons.
+    document.getElementById('pomodoro').addEventListener('click', (event) => setActiveMode('pomodoro', event));
+    document.getElementById('shortBreak').addEventListener('click', (event) => setActiveMode('shortBreak', event));
+    document.getElementById('longBreak').addEventListener('click', (event) => setActiveMode('longBreak', event));
+    
+    // Attach event listeners to control buttons.
+    startButton.addEventListener('click', startTimer);
+    resetButton.addEventListener('click', resetTimer);
+
+    // Initialize with Pomodoro mode.
+    timeLeft = modes.pomodoro;
+    updateDisplay();
+  </script>
+</body>
+</html>
