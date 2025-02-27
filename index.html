@@ -5,18 +5,43 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Focuz - Study Tracker</title>
   <style>
-    /* Purple to blue night vibe background */
+    /* Ensure all elements use border-box sizing */
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    
+    /* Prevent scrolling by making the viewport fixed */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    /* Dark, animated gradient background */
     body {
-      background: linear-gradient(135deg, #2a0845, #1a2980);
+      background: linear-gradient(135deg, #0d1b2a, #0d3b2a, #2e1a47, #0d1b2a);
+      background-size: 400% 400%;
+      animation: gradientShift 20s ease infinite;
       color: #ffffff;
       font-family: 'Courier New', monospace;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
-      margin: 0;
-      padding: 20px;
+      padding: 20px; /* Padding is now included in the 100vh height */
+    }
+
+    @keyframes gradientShift {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
     }
 
     h1 {
@@ -79,24 +104,46 @@
 
     /* Start button style */
     .start-button {
-      background: linear-gradient(45deg, #8e2de2, #4a00e0);
+      background: linear-gradient(45deg, #0d1b2a, #0d3b2a);
     }
     .start-button:hover {
-      background: linear-gradient(45deg, #6a1ab7, #3700b3);
+      background: linear-gradient(45deg, #0d3b2a, #2e1a47);
     }
 
     /* Reset button style */
     .reset-button {
-      background: linear-gradient(45deg, #4a00e0, #8e2de2);
+      background: linear-gradient(45deg, #2e1a47, #0d1b2a);
     }
     .reset-button:hover {
-      background: linear-gradient(45deg, #3700b3, #6a1ab7);
+      background: linear-gradient(45deg, #0d1b2a, #0d3b2a);
     }
 
+    /* Website link styling moved to bottom right */
     .website {
       position: fixed;
       bottom: 20px;
+      right: 20px;
       color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* Fullscreen button styling at bottom left */
+    #fullscreen-button {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      color: #ffffff;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 5px;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    #fullscreen-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.5);
     }
 
     /* Popup (modal) styling */
@@ -114,7 +161,7 @@
     }
 
     .popup-content {
-      background: linear-gradient(135deg, #2a0845, #1a2980);
+      background: linear-gradient(135deg, #0d1b2a, #2e1a47);
       padding: 30px;
       border-radius: 10px;
       text-align: center;
@@ -132,7 +179,7 @@
     }
 
     .close-button {
-      background: linear-gradient(45deg, #8e2de2, #4a00e0);
+      background: linear-gradient(45deg, #0d3b2a, #2e1a47);
       border: none;
       padding: 10px 20px;
       color: #fff;
@@ -143,7 +190,7 @@
     }
 
     .close-button:hover {
-      background: linear-gradient(45deg, #6a1ab7, #3700b3);
+      background: linear-gradient(45deg, #2e1a47, #0d1b2a);
     }
   </style>
 </head>
@@ -164,6 +211,9 @@
   </div>
 
   <div class="website">github.com/winnerlife</div>
+  
+  <!-- Full screen button -->
+  <button id="fullscreen-button">Full Screen</button>
 
   <!-- Audio element to play the alarm sound -->
   <audio id="alarmSound" src="videoplayback.m4a"></audio>
@@ -220,14 +270,11 @@
 
     // Starts or stops the timer.
     function startTimer() {
-      // If the timer is not running...
       if (!isRunning) {
-        // If time is 0 or less, reset it to the initial value.
         if (timeLeft <= 0) {
           timeLeft = modes[currentMode];
           updateDisplay();
         }
-        // Hide the popup if it is visible.
         popup.style.display = 'none';
         isRunning = true;
         startButton.textContent = 'Stop';
@@ -238,7 +285,6 @@
             clearInterval(timerId);
             isRunning = false;
             startButton.textContent = 'Start';
-            // Show the custom popup and play the alarm sound.
             popup.style.display = 'flex';
             alarmSound.play();
           }
@@ -263,12 +309,9 @@
 
     // Close the popup: stop the alarm sound and reset the timer.
     closePopupButton.addEventListener('click', () => {
-      // Stop the alarm sound.
       alarmSound.pause();
       alarmSound.currentTime = 0;
-      // Hide the popup.
       popup.style.display = 'none';
-      // Reset the timer to the current mode's initial value.
       timeLeft = modes[currentMode];
       updateDisplay();
     });
@@ -281,6 +324,17 @@
     // Attach event listeners to control buttons.
     startButton.addEventListener('click', startTimer);
     resetButton.addEventListener('click', resetTimer);
+
+    // Full screen toggle functionality.
+    document.getElementById('fullscreen-button').addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.log(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    });
 
     // Initialize with Pomodoro mode.
     timeLeft = modes.pomodoro;
